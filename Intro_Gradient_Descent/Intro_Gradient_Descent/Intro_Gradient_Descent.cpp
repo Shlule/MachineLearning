@@ -7,7 +7,10 @@
 #include<vector>
 
 #include<cmath>
-
+struct ThetasCoef {
+    double theta_0;
+    double theta_1;
+};
 double hypothesis(double x, double theta_0P = 0, double theta_1P = 0) {
     /* calculate the predicted value for a given set of inputs and Thetas
     
@@ -20,10 +23,11 @@ double hypothesis(double x, double theta_0P = 0, double theta_1P = 0) {
 
 }
 
-std::vector<double> hypthesis(std::vector<double>x, double theta_0 = 0, double theta_1 = 0) {
+std::vector<double> hypothesis(std::vector<double>x, double theta_0 = 0, double theta_1 = 0) {
     std::vector<double>result;
     for (auto i = x.begin(); i != x.end(); i++) {
-        result.emplace_back(theta_0 + (theta_1 * *i));
+        double xValue = theta_0 + (theta_1 * *i);
+        result.emplace_back(xValue);
     }
     return result;
 }
@@ -32,45 +36,124 @@ double costFunction(double theta_0P, double theta_1P, std::vector<double> x, std
     /*calculate the total error for a given set of inputs and thetas*/
 
     double result{ 0.0 };
-    for (auto i = x.begin(); i != x.end(); i++) {
-        result += hypothesis(*i,theta_0P,theta_1P) - 
+    for (int i = 0; i < x.size();i++) {
+        double diff = hypothesis(x[i], theta_0P, theta_1P) - y[i];
+        double squaredDiff = pow(diff, 2);
+        result += squaredDiff;
     }
 
-    return 0;
+    return result / (x.size() * 2);
 }
+
+ThetasCoef gradient(double theta_0P, double theta_1P, double alpha, std::vector<double> x, std::vector<double> y) {
+    double sumDiff0{0.0};
+    double sumDiff1{ 0.0 };
+    double theta_0{ theta_0P };
+    double theta_1{ theta_1P };
+
+
+    for (int i = 0; i < x.size(); i++) {
+       const double errorDiff0 = (hypothesis(x[i], theta_0, theta_1) - y[i]);
+       const double errorDiff1 = (hypothesis(x[i], theta_0, theta_1) - y[i]) * x[i];
+
+       sumDiff0 += errorDiff0;
+       sumDiff1 += errorDiff1;
+    }
+   
+    double theta_0_temp = (alpha / x.size()) * sumDiff0;
+    double theta_1_temp = (alpha / x.size()) * sumDiff1;
+
+    double new_theta_0 = theta_0 - theta_0_temp;
+    double new_theta_1 = theta_1 - theta_1_temp;
+
+    struct ThetasCoef myStruct;
+
+    myStruct.theta_0 = new_theta_0;
+    myStruct.theta_1 = new_theta_1;
+
+    return myStruct;
+    
+}
+
+void findThetas( double theta_0P, double theta_1P, double alpha, double threshold, std::vector<double> xP, std::vector<double> yP) {
+   
+    double diff = costFunction(theta_0P, theta_1P, xP, yP);
+    std::cout << "initial Cost" << diff << '\n';
+
+    int iterationNb{ 0 };
+
+    struct ThetasCoef myResult;
+
+    double theta_0{ theta_0P };
+    double theta_1{ theta_1P };
+    double initialCost{ 0.0 };
+    double newCost{ 0.0 };
+
+    while (diff >= threshold) {
+        initialCost = costFunction(theta_0, theta_1, xP, yP);
+
+        myResult = gradient(theta_0, theta_1, alpha, xP, yP);
+
+        theta_0 = myResult.theta_0;
+        theta_1 = myResult.theta_1;
+
+        newCost = costFunction(theta_0, theta_1, xP, yP);
+        std::cout << "cost : " << newCost << '\n';
+
+        diff = initialCost - newCost;
+
+        iterationNb++;
+
+        std::cout << "Iteration : " << iterationNb << '\n';
+        std::cout << "diff : " << diff << '\n';
+        std::cout << "theta0 : " << theta_0 << '\n';
+        std::cout << "theta1 : " << theta_1 << '\n';
+        std::cout <<'\n';
+    }
+
+}
+
+
+
 
 int main()
 {
-
+    // Read Data from file in to vector.
     std::vector<double> dataY;
     std::vector<double>dataX;
     double element;
     std::ifstream myfile;
-    myfile.open("test.csv", std::ifstream::in);
+    myfile.open("train.csv", std::ifstream::in);
     if (myfile.is_open()) {
      
         while (myfile >> element) {
             dataY.emplace_back(element);
-        }myfile.close();
+        }
+        myfile.close();
         
     }else {
         std::cout << "file non ouvert" << '\n';
     }
 
-    for (auto i = dataY.begin(); i != dataY.end(); i += 2) {
-        dataX.emplace_back(*i);
+    for (int i = 0; i < dataY.size()-1; i += 2) {
+        dataX.emplace_back(dataY[i]);
     }
     for (int i = 0; i < dataY.size(); i += 1) {
         dataY.erase(dataY.begin() + i);
     }
+    //========================================================
+    
+    // making descet of gradient
 
-    for (auto i = dataY.begin(); i != dataY.end(); i++) {
-        std::cout << *i << '\n';
-    }
+    //std::cout << costFunction(0.014, 1.0, dataX, dataY);
+    findThetas(0.0, 0.0, 0.0001, 0.000001, dataX, dataY);
 
-    for (auto i = dataX.begin(); i != dataX.end(); i++) {
-        std::cout << *i << '\n';
-    }
+
+    /*for (double x : dataY) {
+        std::cout << x << '\n';
+    }*/
+
+    
     
 
 
